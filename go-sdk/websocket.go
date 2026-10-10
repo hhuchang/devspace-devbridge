@@ -19,6 +19,8 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/microsoft/dev-tunnels-ssh/src/go/ssh"
+
+	"github.com/huaweicloud/devspace-devbridge/go-sdk/internal/i18n"
 )
 
 const (
@@ -126,16 +128,20 @@ func (d *Devbridge) dialWithRetry(ctx context.Context, url string, opts *websock
 		}
 
 		// 429 Too Many Requests: rate limited
+		// 注意：当前网关的握手路径（host/connect WebSocket 建立）不返回 429——
+		// 429 仅由访客 HTTP 路径（relayHttp/relayVisitorStream 限流）产生，
+		// 端侧 CLI 不会走到。此分支为防御性保留：若未来网关对握手引入限流，
+		// 端侧能给出友好提示而非通用重试文案。
 		if resp != nil && resp.StatusCode == http.StatusTooManyRequests {
 			body, _ := io.ReadAll(resp.Body)
 			_ = resp.Body.Close()
 			reason := strings.TrimSpace(string(body))
 			if attempt == 0 {
-				d.statusf("Connection rejected by gateway: %s, retrying...\n", reason)
+				d.statusf(i18n.T(i18n.MsgGatewayRejected), reason)
 			}
-			lastErr = fmt.Errorf("connection rejected by gateway (429): %s", reason)
+			lastErr = fmt.Errorf(i18n.T(i18n.MsgGatewayRejected429), reason)
 		} else if attempt == 0 {
-			d.statusln("Connection failed, retrying...")
+			d.statusln(i18n.T(i18n.MsgConnectionFailedRetrying))
 		}
 
 		if attempt == maxRetries {
@@ -151,11 +157,11 @@ func (d *Devbridge) dialWithRetry(ctx context.Context, url string, opts *websock
 
 		select {
 		case <-ctx.Done():
-			return nil, fmt.Errorf("websocket dial cancelled: %w", ctx.Err())
+			return nil, fmt.Errorf(i18n.T(i18n.MsgDialCancelled), ctx.Err())
 		case <-time.After(jittered):
 		}
 	}
-	return nil, fmt.Errorf("websocket dial failed after %d retries: %w", maxRetries, lastErr)
+	return nil, fmt.Errorf(i18n.T(i18n.MsgDialFailedRetries), maxRetries, lastErr)
 }
 
 // sshTraceFunc returns a trace function that logs SSH protocol events: errors
@@ -200,6 +206,10 @@ func parseSSHCloseError(err error) error {
 			return ErrTunnelNotFound
 		case "tunnel already registered":
 			return ErrDuplicateHost
+		// 旧网关用 1008+reason 拒绝并发超限；新网关已改为应用码 4001。
+		// 两种都视为配额类拒绝，让 reconnectLoop 立即停止而非重试风暴。
+		case "too many concurrent connections":
+			return ErrQuotaExceeded
 		}
 	}
 	return err
