@@ -1,6 +1,6 @@
 import { defineConfig } from "vitepress";
 
-const base = "/devspace-devbridge-test/";
+const base = "/devspace-devbridge/";
 
 const enSidebar = [
   {
@@ -195,7 +195,7 @@ export default defineConfig({
     },
   },
   sitemap: {
-    hostname: "https://hhuchang.github.io/devspace-devbridge-test/",
+    hostname: "https://hhuchang.github.io/devspace-devbridge/",
     transformItems: (items) =>
       items.filter((item) => item.url !== "404" && item.url !== "/404"),
   },
