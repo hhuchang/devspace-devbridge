@@ -108,6 +108,7 @@ export default defineConfig({
   titleTemplate: ":title | DevBridge",
   base,
   cleanUrls: true,
+  srcExclude: ["README.md", "README.zh-CN.md"],
   lastUpdated: true,
   locales: {
     root: {
