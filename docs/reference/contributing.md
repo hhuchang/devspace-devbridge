@@ -154,7 +154,7 @@ cd go-sdk && go build ./...
 | Static analysis | `go vet ./...`                                                                                          |
 | Lint            | `golangci-lint run` (CLI uses `cli/.golangci.yml`)                                                      |
 | Naming          | Exported identifiers use PascalCase, unexported use camelCase, package names are lowercase single words |
-| Import order    | stdlib → blank line → third-party → blank line → internal packages, sorted with `goimports`             |
+| Import order    | stdlib → third-party → internal packages, sorted with `goimports`                                       |
 | Error handling  | Never ignore error return values; do not discard errors with `_`                                        |
 | Comments        | Exported functions/types must have `// Name ...` doc comments                                           |
 
@@ -302,10 +302,10 @@ git push origin feat/your-feature
 
 Opening a PR automatically triggers the following CI:
 
-| Workflow        | Trigger                   | Checks                                 |
-| --------------- | ------------------------- | -------------------------------------- |
-| `build-cli.yml` | PR to develop/main/master | GoReleaser snapshot build verification |
-| `build-sdk.yml` | PR modifying `go-sdk/**`  | `go build` + `go vet` + `go test`      |
+| Workflow        | Trigger                  | Checks                                 |
+| --------------- | ------------------------ | -------------------------------------- |
+| `build-cli.yml` | PR to develop/master     | GoReleaser snapshot build verification |
+| `build-sdk.yml` | PR modifying `go-sdk/**` | `go build` + `go vet` + `go test`      |
 
 ---
 
@@ -476,10 +476,6 @@ SDK default constants:
 - Every public type/function should have a corresponding `_test.go` file
 - **Backward compatibility**: released APIs must not introduce breaking changes; if a break is unavoidable, mark it with `BREAKING CHANGE` in the PR
 
-### Release tags
-
-SDK releases use the `go-sdk/v*` tag prefix (e.g. `go-sdk/v0.2.1`). Once pushed, a tag is immutable (Go module proxy caches it permanently).
-
 ---
 
 ## Issue guidelines
@@ -521,9 +517,9 @@ Releases are handled by project maintainers. Contributors do not need to worry a
 
 ### Go SDK release
 
-1. A maintainer pushes a `go-sdk/v*` tag (e.g. `go-sdk/v0.2.1`)
-2. The Go module proxy (proxy.golang.org / goproxy.cn) indexes it automatically
-3. `build-sdk.yml` verifies the build and optionally uploads the source package to GitCode
+1. A maintainer manually triggers `build-sdk.yml` via GitHub Actions `workflow_dispatch`, passing a version (e.g. `0.2.3`)
+2. The workflow runs build/vet/test quality gates, then creates a GitHub Release (source tar.gz + checksums.txt, `--latest=false` so it never steals the CLI's latest) and syncs the `go-sdk/v*` tag to the GitCode mirror repo
+3. The Go module proxy (proxy.golang.org / goproxy.cn) indexes and permanently caches it — the tag is immutable once created, and re-running with an already-released version fails (422)
 
 ---
 

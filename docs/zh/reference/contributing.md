@@ -148,15 +148,15 @@ cd go-sdk && go build ./...
 
 ### Go 代码（cli/ 和 go-sdk/）
 
-| 规则     | 工具 / 说明                                                         |
-| -------- | ------------------------------------------------------------------- |
-| 格式化   | `gofmt -s -w .` 或 `go fmt ./...`，提交前必须执行                   |
-| 静态检查 | `go vet ./...`                                                      |
-| Lint     | `golangci-lint run`（CLI 使用 `cli/.golangci.yml` 配置）            |
-| 命名     | 导出标识符用 PascalCase，未导出用 camelCase，包名全小写单单词       |
-| 导入顺序 | 标准库 → 空行 → 第三方库 → 空行 → 本项目内部包，用 `goimports` 排序 |
-| 错误处理 | 不忽略 error 返回值，不使用 `_` 丢弃 error                          |
-| 注释     | 导出函数/类型须有 `// Name ...` 格式的文档注释                      |
+| 规则     | 工具 / 说明                                                   |
+| -------- | ------------------------------------------------------------- |
+| 格式化   | `gofmt -s -w .` 或 `go fmt ./...`，提交前必须执行             |
+| 静态检查 | `go vet ./...`                                                |
+| Lint     | `golangci-lint run`（CLI 使用 `cli/.golangci.yml` 配置）      |
+| 命名     | 导出标识符用 PascalCase，未导出用 camelCase，包名全小写单单词 |
+| 导入顺序 | 标准库 → 第三方库 → 本项目内部包，用 `goimports` 排序         |
+| 错误处理 | 不忽略 error 返回值，不使用 `_` 丢弃 error                    |
+| 注释     | 导出函数/类型须有 `// Name ...` 格式的文档注释                |
 
 > **golangci-lint 配置**：当前 `cli/.golangci.yml` 禁用了 `errcheck`、`gosec`、`lll` 等严格 linter。新增代码应尽量遵循这些规则的精神，即使工具不强制。
 
@@ -302,10 +302,10 @@ git push origin feat/your-feature
 
 PR 创建后将自动触发以下 CI：
 
-| 工作流          | 触发条件                  | 检查内容                          |
-| --------------- | ------------------------- | --------------------------------- |
-| `build-cli.yml` | PR 到 develop/main/master | GoReleaser snapshot 编译验证      |
-| `build-sdk.yml` | PR 修改 `go-sdk/**`       | `go build` + `go vet` + `go test` |
+| 工作流          | 触发条件             | 检查内容                          |
+| --------------- | -------------------- | --------------------------------- |
+| `build-cli.yml` | PR 到 develop/master | GoReleaser snapshot 编译验证      |
+| `build-sdk.yml` | PR 修改 `go-sdk/**`  | `go build` + `go vet` + `go test` |
 
 ---
 
@@ -476,10 +476,6 @@ SDK 默认常量：
 - 每个公开类型/函数应有对应的 `_test.go` 文件
 - **向后兼容**：已发布的 API 不应引入破坏性变更；如必须变更，在 PR 中标注 `BREAKING CHANGE`
 
-### 发布标签
-
-SDK 发布使用 `go-sdk/v*` 前缀的 tag（如 `go-sdk/v0.2.1`）。tag 一旦推送即不可变（Go module proxy 会永久缓存）。
-
 ---
 
 ## Issue 指南
@@ -521,9 +517,9 @@ SDK 发布使用 `go-sdk/v*` 前缀的 tag（如 `go-sdk/v0.2.1`）。tag 一旦
 
 ### Go SDK 发布
 
-1. 维护者推送 `go-sdk/v*` 格式的 tag（如 `go-sdk/v0.2.1`）
-2. Go module proxy（proxy.golang.org / goproxy.cn）自动索引
-3. `build-sdk.yml` 验证构建并可选上传源码包到 GitCode
+1. 维护者通过 GitHub Actions `workflow_dispatch` 手动触发 `build-sdk.yml`，传入版本号（如 `0.2.3`）
+2. 工作流跑 build/vet/test 质量门禁，创建 GitHub Release（源码 tar.gz + checksums.txt，`--latest=false` 不抢占 CLI 的 latest），并把 `go-sdk/v*` tag 同步到 GitCode 镜像仓
+3. Go module proxy（proxy.golang.org / goproxy.cn）自动索引并永久缓存——tag 一旦创建即不可变，重跑同一版本会失败（422）
 
 ---
 
