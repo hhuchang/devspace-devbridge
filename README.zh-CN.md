@@ -1,6 +1,16 @@
 # DevBridge
 
-> English: [README.md](README.md)
+<p align="center">
+  <img src="docs/assets/images/devbridge_logo.svg" alt="DevBridge Logo" width="160" />
+</p>
+
+<p align="center">
+  <strong>开发隧道服务 · 建隧道 / 绑端口 / Host 托管 / Connect 连接 —— 本地服务无需公网入站端口即可远程可达</strong>
+</p>
+
+<p align="center">
+  <a href="README.zh-CN.md">中文</a> · <a href="README.md">English</a> · <a href="https://huaweicloud.github.io/devspace-devbridge/">在线文档</a> · <a href="https://huaweicloud.github.io/devspace-devbridge/guide/quickstart">快速开始</a> · <a href="#架构">架构</a> · <a href="cli/README.md">CLI</a> · <a href="go-sdk/README.md">Go SDK</a>
+</p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-green.svg" alt="License" /></a>
@@ -17,12 +27,7 @@ DevBridge 是华为云的开发隧道服务。它在 **Host**（运行本地服�
 
 ## 简介
 
-DevBridge 解决一个常见开发痛点：运行在笔记本或 CI runner 上的服务（**Host**）位于 NAT 或防火墙之后，外部无法访问。DevBridge 通过云侧中继（**Gateway**）将其暴露，任何 **Connect** 客户端都能经由稳定的公网 URL 访问它——Host 无需开放入站端口。
-
-两种使用方式：
-
-- **CLI**（`cli/`）——面向终端用户的 `devbridge` 命令：创建隧道、托管本地端口、连接远端隧道。见 [cli/README.md](cli/README.md)。
-- **Go SDK**（`go-sdk/`）——将相同核心能力封装为 Go API，供三方集成。见 [go-sdk/README.md](go-sdk/README.md)。
+DevBridge 是开发隧道服务，通过云侧 **Gateway** 中继本地服务，使其无需开放入站端口即可被远程访问。它有两种模式——**Host** 将本地服务端口暴露到中继，**Connect** 开启本地监听器转发到远端隧道——两者均向 Gateway 发起出站连接。可通过 [CLI](cli/README.md) 或 [Go SDK](go-sdk/README.md) 使用。
 
 ## 架构
 
@@ -123,6 +128,10 @@ devbridge connect <tunnel-id>
 欢迎贡献。分支模型、代码风格、CI 与发布流程见
 [贡献指南](https://huaweicloud.github.io/devspace-devbridge/reference/contributing)
 （源码：[docs/reference/contributing.md](docs/reference/contributing.md)）。
+
+## 免责声明
+
+DevBridge 是面向开发/测试的隧道服务，按"现状"提供、无 SLA，请勿用于生产环境或关键数据场景；暴露服务时请自行承担安全责任，并遵守相关法律法规与组织合规要求。完整条款见[免责声明](https://huaweicloud.github.io/devspace-devbridge/reference/disclaimer)。
 
 ## 许可证
 

@@ -1,6 +1,16 @@
 # DevBridge
 
-> 中文文档：[README.zh-CN.md](README.zh-CN.md)
+<p align="center">
+  <img src="docs/assets/images/devbridge_logo.svg" alt="DevBridge Logo" width="160" />
+</p>
+
+<p align="center">
+  <strong>Development Tunneling Service · Tunnel / Port / Host / Connect — reach local services remotely without a public inbound port</strong>
+</p>
+
+<p align="center">
+  <a href="README.zh-CN.md">中文</a> · <a href="README.md">English</a> · <a href="https://huaweicloud.github.io/devspace-devbridge/">Online Docs</a> · <a href="https://huaweicloud.github.io/devspace-devbridge/guide/quickstart">Quick Start</a> · <a href="#architecture">Architecture</a> · <a href="cli/README.md">CLI</a> · <a href="go-sdk/README.md">Go SDK</a>
+</p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-green.svg" alt="License" /></a>
@@ -21,17 +31,11 @@ exposed firewall rule on the service host.
 
 ## Introduction
 
-DevBridge solves a common development friction: a service running on your laptop or a CI runner
-(the **Host**) sits behind NAT or a firewall and is unreachable from the outside. DevBridge exposes
-it through a cloud relay (**Gateway**) so that any **Connect** client can reach it over a stable
-public URL — without the Host opening an inbound port.
-
-Two ways to use it:
-
-- **CLI** (`cli/`) — the `devbridge` command for end users: create tunnels, host local ports,
-  connect to remote tunnels. See [cli/README.md](cli/README.md).
-- **Go SDK** (`go-sdk/`) — the same core capabilities as a Go API for third-party integration.
-  See [go-sdk/README.md](go-sdk/README.md).
+DevBridge is a development tunneling service that relays a local service through a cloud **Gateway**
+so it can be reached remotely without opening an inbound port. It runs in two modes — **Host**
+exposes local service ports to the relay, **Connect** opens a local listener that forwards to a
+remote tunnel — and both connect outbound to the Gateway. Use it via the [CLI](cli/README.md) or
+[Go SDK](go-sdk/README.md).
 
 ## Architecture
 
@@ -136,6 +140,13 @@ Contributions are welcome. See the
 [contributing guide](https://huaweicloud.github.io/devspace-devbridge/reference/contributing)
 (source: [docs/reference/contributing.md](docs/reference/contributing.md)) for the branch model,
 code style, CI and release flow.
+
+## Disclaimer
+
+DevBridge is a development/testing tunneling service provided "as is" without an SLA — do not use
+it in production or for critical data; you are responsible for securing exposed services and must
+comply with applicable laws and your organization's requirements. Full terms:
+[disclaimer](https://huaweicloud.github.io/devspace-devbridge/reference/disclaimer).
 
 ## License
 
