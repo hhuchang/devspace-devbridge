@@ -2,36 +2,141 @@
 
 > 中文文档：[README.zh-CN.md](README.zh-CN.md)
 
-DevBridge is a Huawei Cloud development tunneling service. It relays between a Host (local
-service hosting) and a Connect (remote connection) so that local services can be reached
-remotely without opening any public inbound port. This repository is a monorepo; each
-component lives in its own top-level directory to avoid toolchain conflicts.
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-green.svg" alt="License" /></a>
+  <img src="https://img.shields.io/badge/Go-1.26%20%2F%201.22-00ADD8.svg" alt="Go" />
+  <img src="https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg" alt="Platform" />
+  <a href="https://huaweicloud.github.io/devspace-devbridge/"><img src="https://img.shields.io/badge/docs-online-blue.svg" alt="Docs" /></a>
+</p>
 
-Online documentation: <https://huaweicloud.github.io/devspace-devbridge/>
+DevBridge is Huawei Cloud's development tunneling service. It relays between a **Host** (a device
+running a local service) and a **Connect** (a device that wants to reach that service) through a
+**Gateway**, so local services can be accessed remotely without opening any public inbound port.
+Both Host and Connect open outbound WebSocket connections to the relay — no inbound port, no
+exposed firewall rule on the service host.
 
-## Repository structure
+📖 Online documentation: <https://huaweicloud.github.io/devspace-devbridge/>
+
+---
+
+## Introduction
+
+DevBridge solves a common development friction: a service running on your laptop or a CI runner
+(the **Host**) sits behind NAT or a firewall and is unreachable from the outside. DevBridge exposes
+it through a cloud relay (**Gateway**) so that any **Connect** client can reach it over a stable
+public URL — without the Host opening an inbound port.
+
+Two ways to use it:
+
+- **CLI** (`cli/`) — the `devbridge` command for end users: create tunnels, host local ports,
+  connect to remote tunnels. See [cli/README.md](cli/README.md).
+- **Go SDK** (`go-sdk/`) — the same core capabilities as a Go API for third-party integration.
+  See [go-sdk/README.md](go-sdk/README.md).
+
+## Architecture
+
+```text
+┌─────────────┐    WebSocket + TLS 1.3    ┌──────────────┐    WebSocket + TLS 1.3    ┌─────────────┐
+│  Host       │ ◄──────────────────────► │   Gateway    │ ◄──────────────────────► │ Connect     │
+│  (Listen)   │    SSH data channel       │  (Relay)     │    SSH data channel       │  (Send)     │
+└──────┬──────┘                          └──────────────┘                          └──────┬──────┘
+       │                                                                                 │
+   Local service ports                                                            Local TCP listener
+   (8080, 3000...)                                                          (forward to Host ports)
+```
+
+- **Control channel**: WebSocket connection, carries rendezvous signaling
+- **Data channel**: SSH over WebSocket, implements port forwarding (Host side `-R` mode)
+- **Authentication**: JWT token passed via the `Sec-WebSocket-Protocol` header
+- **Tunnel identity**: Passed via the TLS SNI subdomain (`{tunnelId}.{clusterId}.myhuaweicloud.com`)
+
+Both Host and Connect initiate outbound connections to the Gateway, so the Host never needs a
+public inbound port.
+
+## Quick Start
+
+The fastest way to try DevBridge is the CLI. Full command reference:
+[cli/README.md](cli/README.md) · online [quickstart](https://huaweicloud.github.io/devspace-devbridge/guide/quickstart).
+
+```bash
+# 1. Install (Linux / macOS; Windows: irm .../install.ps1 | iex)
+curl -fsSL https://github.com/huaweicloud/devspace-devbridge/releases/latest/download/install.sh | bash
+
+# 2. Log in (Huawei Cloud SSO browser login, or --api-key / HW_API_KEY env)
+devbridge auth login
+
+# 3. Host a local port — auto-creates a tunnel and binds the port
+devbridge host -p 8080 -d "dev-env" -e 8
+#   → your service is now reachable at https://<tunnel-id>-8080.<cluster>.myhuaweicloud.com
+
+# 4. From another machine, connect and forward to localhost
+devbridge connect <tunnel-id>
+#   → http://localhost:8080 now hits the remote service
+```
+
+To embed the same flow in Go code, see the [Go SDK quick start](go-sdk/README.md#quick-start).
+
+## Core Capabilities
+
+| Capability | CLI | Go SDK | Details |
+| --- | --- | --- | --- |
+| Tunnel management (create / list / update / delete, default tunnel) | ✅ | ✅ | [cli](cli/README.md#tunnel-management) · [sdk](go-sdk/README.md#features) |
+| Port management (bind ports, HTTP/HTTPS/Auto, anonymous access) | ✅ | ✅ | [cli](cli/README.md#port-management) · [sdk](go-sdk/README.md#features) |
+| Host mode — expose local ports to the relay | ✅ | ✅ | [cli](cli/README.md#remote-port-forwarding) · [sdk](go-sdk/README.md#quick-start) |
+| Connect mode — reach a remote tunnel via a local listener | ✅ | ✅ | [cli](cli/README.md#remote-port-forwarding) · [sdk](go-sdk/README.md#quick-start) |
+| Token issuance (Host / Connect JWT) | ✅ | ✅ | [cli](cli/README.md#tunnel-management) · [sdk](go-sdk/README.md#quick-start) |
+| Quota query & usage | ✅ | — | [cli](cli/README.md#quota-query) |
+| Debugging tools (HTTP echo, URI ping) | ✅ | — | [cli](cli/README.md#debugging-tools) |
+| Auth — SSO browser / API Key / env var / direct JWT | ✅ | ✅ | [cli](cli/README.md#login) · [sdk](go-sdk/README.md#client-configuration) |
+| Auto-reconnect (backoff + SSH session resumption) | ✅ | ✅ | [cli](cli/README.md#features) |
+| Bilingual output (EN default, `DEVBRIDGE_LANG=zh`) | ✅ | — | [cli](cli/README.md#language-switching) |
+
+## Repository Structure
 
 ```text
 .
-├── .github/              # repo-level CI, release and sync workflows
-├── cli/                  # DevBridge CLI (Go, for end users)
-├── go-sdk/               # DevBridge Go SDK (Go, for third-party integration)
-├── docs/                 # VitePress docs site and its Node.js toolchain
-└── README.md             # repository overview
+├── .github/              # CI, release and mirror-sync workflows
+├── cli/                  # DevBridge CLI — Go 1.26, end-user tool
+├── go-sdk/               # DevBridge Go SDK — Go 1.22, integration API
+├── docs/                 # VitePress documentation site (Node.js toolchain)
+├── LICENSE               # Apache License 2.0
+└── README.md             # repository overview (this file)
 ```
 
-Each component uses its own top-level directory, keeping build configs and dependency files
-within that directory to avoid toolchain conflicts.
+Each component lives in its own top-level directory with its own build config and dependencies,
+avoiding toolchain conflicts.
 
-## Components
-
-| Component | Description                                                           | Details                              |
-| --------- | --------------------------------------------------------------------- | ------------------------------------ |
-| CLI       | Huawei Cloud DevStation remote tunnel port-forwarding CLI (Go 1.26)   | [cli/README.md](cli/README.md)       |
-| Go SDK    | Wraps the CLI core capabilities as a Go API for integration (Go 1.22) | [go-sdk/README.md](go-sdk/README.md) |
+| Component | Description | Details |
+| --- | --- | --- |
+| CLI | `devbridge` remote tunnel port-forwarding CLI (Go 1.26) | [cli/README.md](cli/README.md) |
+| Go SDK | CLI core capabilities as a Go API for integration (Go 1.22) | [go-sdk/README.md](go-sdk/README.md) |
+| Docs | VitePress site, published to GitHub Pages | [docs/README.md](docs/README.md) |
 
 ## Documentation
 
-The docs site source lives in `docs/`, built with VitePress and published to GitHub Pages.
-For local preview, adding pages, dependency policy and publishing, see
-[docs/README.md](docs/README.md).
+The documentation site source lives in `docs/` and is published to GitHub Pages:
+<https://huaweicloud.github.io/devspace-devbridge/>. Working on the site (local preview, adding
+pages, dependency policy, publishing) is documented in [docs/README.md](docs/README.md).
+
+Key pages:
+
+| Topic | Page |
+| --- | --- |
+| Overview | [guide/overview](https://huaweicloud.github.io/devspace-devbridge/guide/overview) |
+| Install & quick start | [guide/install](https://huaweicloud.github.io/devspace-devbridge/guide/install) · [guide/quickstart](https://huaweicloud.github.io/devspace-devbridge/guide/quickstart) |
+| Host / Connect | [guide/host](https://huaweicloud.github.io/devspace-devbridge/guide/host) · [guide/connect](https://huaweicloud.github.io/devspace-devbridge/guide/connect) |
+| Tunnels / Ports | [guide/tunnels](https://huaweicloud.github.io/devspace-devbridge/guide/tunnels) · [guide/ports](https://huaweicloud.github.io/devspace-devbridge/guide/ports) |
+| Authentication | [guide/authentication](https://huaweicloud.github.io/devspace-devbridge/guide/authentication) |
+| CLI / API reference | [reference/cli](https://huaweicloud.github.io/devspace-devbridge/reference/cli) · [reference/api](https://huaweicloud.github.io/devspace-devbridge/reference/api) |
+| Troubleshooting | [reference/troubleshooting](https://huaweicloud.github.io/devspace-devbridge/reference/troubleshooting) |
+
+## Contributing
+
+Contributions are welcome. See the
+[contributing guide](https://huaweicloud.github.io/devspace-devbridge/reference/contributing)
+(source: [docs/reference/contributing.md](docs/reference/contributing.md)) for the branch model,
+code style, CI and release flow.
+
+## License
+
+[Apache License 2.0](LICENSE).
