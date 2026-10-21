@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	DefaultAPIBaseURL  = "https://bridge.developer.myhuaweicloud.com/open-api-inner/v1/relay-controller"
+	DefaultAPIBaseURL  = "https://bridge.developer.myhuaweicloud.com"
 	DefaultGatewayAddr = "gateway.devbridge-s2.hwtunnel.com:443"
 	DefaultGatewayHost = "devbridge-s2.hwtunnel.com"
 )
