@@ -25,6 +25,8 @@ const (
 	headerXAPIKey     = "X-API-Key"
 	headerContentType = "content-type"
 	headerJSON        = "application/json"
+	headerServedBy    = "X-Served-By"
+	headerRequestID   = "X-Request-Id"
 )
 
 // APIError represents a business error returned by the server.
@@ -126,7 +128,15 @@ func (c *Client) Do(ctx context.Context, method, path string, body, result any) 
 		if apiErr := parseAPIError(respBody); apiErr != nil {
 			return apiErr
 		}
-			return fmt.Errorf(i18n.T(i18n.MsgServerHTTPError), resp.StatusCode, string(respBody))
+		// X-Served-By 为空表示响应不是经过隧道基础设施产生的：请求可能
+		// 被防火墙/LB/CDN 拦截，根本没到达隧道服务。有该头时才附带
+		// 来源集群与请求 ID，便于回查服务端日志。
+		servedBy := resp.Header.Get(headerServedBy)
+		if servedBy == "" {
+			return fmt.Errorf(i18n.T(i18n.MsgNotReachedTunnel))
+		}
+		return fmt.Errorf(i18n.T(i18n.MsgServerHTTPErrorWithMeta),
+			resp.StatusCode, string(respBody), servedBy, resp.Header.Get(headerRequestID))
 	}
 
 	if result != nil && len(respBody) > 0 {

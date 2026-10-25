@@ -110,6 +110,7 @@ func (d *Devbridge) dialWithRetry(ctx context.Context, url string, opts *websock
 	const maxDelay = 30 * time.Second
 
 	var lastErr error
+	var lastResp *http.Response
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		d.logger.Debug("WebSocket handshake attempt",
 			"attempt", attempt+1, "maxRetries", maxRetries, "url", url)
@@ -120,6 +121,9 @@ func (d *Devbridge) dialWithRetry(ctx context.Context, url string, opts *websock
 			return conn, nil
 		}
 		lastErr = err
+		if resp != nil {
+			lastResp = resp
+		}
 
 		// 409 Conflict: this tunnel already has a host
 		if resp != nil && resp.StatusCode == http.StatusConflict {
@@ -161,7 +165,22 @@ func (d *Devbridge) dialWithRetry(ctx context.Context, url string, opts *websock
 		case <-time.After(jittered):
 		}
 	}
-	return nil, fmt.Errorf(i18n.T(i18n.MsgDialFailedRetries), maxRetries, lastErr)
+	finalErr := lastErr
+	if suffix := respMetaSuffix(lastResp); suffix != "" {
+		finalErr = fmt.Errorf("%w%s", lastErr, suffix)
+	}
+	return nil, fmt.Errorf(i18n.T(i18n.MsgDialFailedRetries), maxRetries, finalErr)
+}
+
+// respMetaSuffix returns a user-facing origin suffix for a failed handshake
+// response, or the empty string when the response never reached the gateway (no
+// X-Served-By header). A nil response has no headers and also yields "".
+func respMetaSuffix(resp *http.Response) string {
+	if resp == nil || resp.Header.Get("X-Served-By") == "" {
+		return ""
+	}
+	return fmt.Sprintf(i18n.T(i18n.MsgWSResponseOrigin),
+		resp.Header.Get("X-Served-By"), resp.Header.Get("X-Request-Id"))
 }
 
 // sshTraceFunc returns a trace function that logs SSH protocol events: errors
