@@ -37,6 +37,7 @@ var (
 	MsgHTTPRequestFailed         = Message{ZH: "HTTP 请求失败: %w", EN: "http request failed: %w"}
 	MsgReadResponseFailed        = Message{ZH: "读取响应失败: %w", EN: "read response: %w"}
 	MsgServerHTTPErrorWithMeta   = Message{ZH: "服务端错误: HTTP %d: %s（来源: %s，请求 ID: %s）", EN: "server error: HTTP %d: %s (source: %s, request id: %s)"}
+	MsgServiceHTTPErrorWithMeta  = Message{ZH: "隧道内服务错误: HTTP %d: %s（来源: %s，请求 ID: %s）", EN: "tunneled service error: HTTP %d: %s (source: %s, request id: %s)"}
 	MsgNotReachedTunnel          = Message{ZH: "请求未到达隧道服务，域名可能被防火墙/负载均衡拦截", EN: "request did not reach the tunnel service; the domain may be blocked by a firewall/load balancer"}
 	MsgUnmarshalResponseFailed   = Message{ZH: "解析响应失败: %w", EN: "unmarshal response: %w"}
 )

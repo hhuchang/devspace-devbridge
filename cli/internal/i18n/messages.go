@@ -172,6 +172,8 @@ type PingMessages struct {
 	PingShort      Message
 	Disconnected   Message
 	NotServedByTun Message
+	GatewayError   Message
+	ServiceError   Message
 }
 
 type ConfigMessages struct {

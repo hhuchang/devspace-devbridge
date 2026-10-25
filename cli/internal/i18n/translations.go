@@ -120,6 +120,8 @@ func init() {
 	Msg.Ping.PingShort = Message{ZH: "测试到服务器的连通性", EN: "Test connectivity to the server"}
 	Msg.Ping.Disconnected = Message{ZH: "隧道连接断开", EN: "tunnel disconnected"}
 	Msg.Ping.NotServedByTun = Message{ZH: "请求未到达隧道服务，域名可能被防火墙/负载均衡拦截", EN: "request did not reach the tunnel service; the domain may be blocked by a firewall/load balancer"}
+	Msg.Ping.GatewayError = Message{ZH: "网关错误: HTTP %s", EN: "gateway error: HTTP %s"}
+	Msg.Ping.ServiceError = Message{ZH: "隧道内服务错误: HTTP %s", EN: "tunneled service error: HTTP %s"}
 	Msg.Echo.PingResultOK = Message{ZH: "HTTP %s -- %d ms\n", EN: "HTTP %s -- %d ms\n"}
 	Msg.Echo.PingResultErr = Message{ZH: "HTTP %s -- %d ms（错误: %v）\n", EN: "HTTP %s -- %d ms (err: %v)\n"}
 	Msg.Echo.InvalidPortNumber = Message{ZH: "无效端口号 %d（端口需在 1-65535 之间）", EN: "invalid port number %d (port must be between 1 and 65535)"}

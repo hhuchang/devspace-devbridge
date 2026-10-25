@@ -2,6 +2,7 @@ package netutil
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -58,6 +59,16 @@ func PingURI(rawURI string, timeout time.Duration) *PingResult {
 			result.StatusText = i18n.T(i18n.Msg.Ping.NotServedByTun)
 			return result
 		}
+		// X-DevBridge-Error-Origin 区分错误产生方（自定义头，WAF/ELB 不改写）：
+		// service → 隧道内服务返回；gateway/空 → 网关自产。
+		if resp.Header.Get("X-DevBridge-Error-Origin") == "service" {
+			result.Err = errors.New(resp.Status)
+			result.StatusText = fmt.Sprintf(i18n.T(i18n.Msg.Ping.ServiceError), resp.Status)
+			return result
+		}
+		result.Err = errors.New(resp.Status)
+		result.StatusText = fmt.Sprintf(i18n.T(i18n.Msg.Ping.GatewayError), resp.Status)
+		return result
 	}
 
 	result.StatusText = resp.Status

@@ -24,21 +24,40 @@ func TestPingURI_NoServedByOnError(t *testing.T) {
 	}
 }
 
-// TestPingURI_ServedByKeepsStatus 验证：有 X-Served-By 的 4xx/5xx 保留原始状态，
-// 不被误判为「未到达」。
+// TestPingURI_ServedByKeepsStatus 验证：有 X-Served-By 且 origin=gateway 的 4xx
+// 归为「网关错误」，不带原始 HTTP 状态前缀，也不被误判为「未到达」。
 func TestPingURI_ServedByKeepsStatus(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Served-By", "tunnels-cn-north-4-bridge")
+		w.Header().Set("X-DevBridge-Error-Origin", "gateway")
 		w.WriteHeader(http.StatusBadGateway)
 	}))
 	defer srv.Close()
 
 	r := PingURI(srv.URL, 5*time.Second)
-	if r.Err != nil {
-		t.Fatalf("expected no Err when X-Served-By present, got %v", r.Err)
+	if r.Err == nil {
+		t.Fatal("expected Err for gateway-origin 4xx, got nil")
 	}
-	if r.StatusText != "502 Bad Gateway" {
-		t.Fatalf("expected raw status 502 Bad Gateway, got %q", r.StatusText)
+	if r.StatusText == "502 Bad Gateway" {
+		t.Fatalf("should classify as gateway error, got raw status %q", r.StatusText)
+	}
+}
+
+// TestPingURI_ServiceOriginError 验证：origin=service 的 4xx 归为「隧道内服务错误」。
+func TestPingURI_ServiceOriginError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Served-By", "tunnels-cn-north-4-bridge")
+		w.Header().Set("X-DevBridge-Error-Origin", "service")
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	r := PingURI(srv.URL, 5*time.Second)
+	if r.Err == nil {
+		t.Fatal("expected Err for service-origin 5xx, got nil")
+	}
+	if r.StatusText == "500 Internal Server Error" {
+		t.Fatalf("should classify as service error, got raw status %q", r.StatusText)
 	}
 }
 

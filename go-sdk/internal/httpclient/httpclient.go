@@ -27,6 +27,7 @@ const (
 	headerJSON        = "application/json"
 	headerServedBy    = "X-Served-By"
 	headerRequestID   = "X-Request-Id"
+	headerErrorOrigin = "X-DevBridge-Error-Origin"
 )
 
 // APIError represents a business error returned by the server.
@@ -134,6 +135,13 @@ func (c *Client) Do(ctx context.Context, method, path string, body, result any) 
 		servedBy := resp.Header.Get(headerServedBy)
 		if servedBy == "" {
 			return fmt.Errorf(i18n.T(i18n.MsgNotReachedTunnel))
+		}
+		// X-DevBridge-Error-Origin 区分错误产生方（gateway vs service），
+		// 是自定义头、WAF/ELB 不改写，故比 Server 可靠。service 表示隧道内
+		// 服务自己返回的响应。
+		if resp.Header.Get(headerErrorOrigin) == "service" {
+			return fmt.Errorf(i18n.T(i18n.MsgServiceHTTPErrorWithMeta),
+				resp.StatusCode, string(respBody), servedBy, resp.Header.Get(headerRequestID))
 		}
 		return fmt.Errorf(i18n.T(i18n.MsgServerHTTPErrorWithMeta),
 			resp.StatusCode, string(respBody), servedBy, resp.Header.Get(headerRequestID))

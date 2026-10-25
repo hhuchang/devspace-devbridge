@@ -50,6 +50,31 @@ func TestDo_ServedByOnError(t *testing.T) {
 	}
 }
 
+// TestDo_ServiceOriginOnError 验证：origin=service 的 4xx/5xx 报「隧道内服务
+// 错误」而非「服务端错误」，且仍附带来源与请求 ID。
+func TestDo_ServiceOriginOnError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Served-By", "tunnels-cn-north-4-bridge")
+		w.Header().Set("X-DevBridge-Error-Origin", "service")
+		w.Header().Set("X-Request-Id", "deadbeefdeadbeefdeadbeefdeadbeef")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("boom"))
+	}))
+	defer srv.Close()
+
+	c := New("key", srv.URL, nil)
+	err := c.Do(context.Background(), http.MethodGet, "/x", nil, nil)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "tunnels-cn-north-4-bridge") {
+		t.Fatalf("error lacks X-Served-By value: %v", err)
+	}
+	if !strings.Contains(err.Error(), "deadbeefdeadbeefdeadbeefdeadbeef") {
+		t.Fatalf("error lacks X-Request-Id value: %v", err)
+	}
+}
+
 // TestDo_BusinessErrorWins 验证：业务错误（{error:{code,message}}）仍优先判为
 // APIError，不被响应头逻辑覆盖。
 func TestDo_BusinessErrorWins(t *testing.T) {
